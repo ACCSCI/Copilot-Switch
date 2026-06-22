@@ -3,6 +3,8 @@ import { providerRepo } from '../db/repository';
 import { providerInputSchema, activateProviderInputSchema } from '@shared/schemas';
 import { activateProvider } from '../services/envSwitcher';
 import { encryptSecret } from '../services/crypto';
+import { decryptSecret } from '../services/crypto';
+import { logger } from '../logger';
 
 export function registerProviderIpc() {
   ipcMain.handle('providers:list', async () => {
@@ -18,6 +20,7 @@ export function registerProviderIpc() {
         bearerTokenEncrypted: input.bearerToken ? encryptSecret(input.bearerToken) : null,
       });
     }
+    logger.info('provider created', { id: dto.id, name: dto.name, type: dto.type });
     return providerRepo.list().then((list) => list.find((p) => p.id === dto.id)!);
   });
 
@@ -30,11 +33,13 @@ export function registerProviderIpc() {
         bearerTokenEncrypted: input.bearerToken ? encryptSecret(input.bearerToken) : null,
       });
     }
+    logger.info('provider updated', { id });
     return dto;
   });
 
   ipcMain.handle('providers:delete', async (_e, id: string) => {
     await providerRepo.delete(id);
+    logger.info('provider deleted', { id });
   });
 
   ipcMain.handle('providers:reorder', async (_e, ids: string[]) => {
@@ -45,5 +50,14 @@ export function registerProviderIpc() {
   ipcMain.handle('providers:activate', async (_e, raw: unknown) => {
     const { providerId } = activateProviderInputSchema.parse(raw);
     return activateProvider(providerId);
+  });
+
+  ipcMain.handle('providers:getSecrets', async (_e, id: string) => {
+    const provider = await providerRepo.getById(id);
+    if (!provider) throw new Error(`Provider not found: ${id}`);
+    return {
+      apiKey: provider.api_key_encrypted ? decryptSecret(provider.api_key_encrypted) : undefined,
+      bearerToken: provider.bearer_token_encrypted ? decryptSecret(provider.bearer_token_encrypted) : undefined,
+    };
   });
 }

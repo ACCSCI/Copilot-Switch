@@ -5,7 +5,7 @@
  */
 import { contextBridge, ipcRenderer } from 'electron';
 import type { ProviderInput, PingResult, ActivateProviderInput } from '@shared/schemas';
-import type { ProviderDTO, HealthCheckDTO, EnvSnapshot, RendererApi } from '@shared/types';
+import type { ProviderDTO, HealthCheckDTO, EnvSnapshot, ProviderSecrets, RendererApi } from '@shared/types';
 
 const api: RendererApi = {
   providers: {
@@ -19,6 +19,8 @@ const api: RendererApi = {
       const payload: ActivateProviderInput = { providerId: id };
       return ipcRenderer.invoke('providers:activate', payload) as Promise<{ env: EnvSnapshot }>;
     },
+    getSecrets: (id: string) =>
+      ipcRenderer.invoke('providers:getSecrets', id) as Promise<ProviderSecrets>,
   },
   health: {
     check: (id: string) => ipcRenderer.invoke('health:check', id) as Promise<PingResult>,

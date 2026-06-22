@@ -52,6 +52,11 @@ export interface EnvSnapshot {
   COPILOT_WIRE_API?: string;
 }
 
+export interface ProviderSecrets {
+  apiKey?: string;
+  bearerToken?: string;
+}
+
 /** 渲染层可见的 IPC API */
 export interface RendererApi {
   providers: {
@@ -61,6 +66,7 @@ export interface RendererApi {
     delete(id: string): Promise<void>;
     reorder(ids: string[]): Promise<void>;
     activate(id: string): Promise<{ env: EnvSnapshot }>;
+    getSecrets(id: string): Promise<ProviderSecrets>;
   };
   health: {
     check(id: string): Promise<import('./schemas').PingResult>;
