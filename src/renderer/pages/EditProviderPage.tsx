@@ -14,11 +14,32 @@ export function EditProviderPage() {
   const upsert = useProviderStore((s) => s.upsert);
   const providers = useProviderStore((s) => s.providers);
   const [provider, setProvider] = useState<ProviderDTO | null>(null);
+  const [apiKey, setApiKey] = useState<string | undefined>(undefined);
+  const [bearerToken, setBearerToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     const p = providers.find((x) => x.id === id);
     setProvider(p ?? null);
   }, [id, providers]);
+
+  useEffect(() => {
+    if (!provider) return;
+    let cancelled = false;
+    window.api.providers
+      .getSecrets(provider.id)
+      .then((s) => {
+        if (cancelled) return;
+        setApiKey(s.apiKey);
+        setBearerToken(s.bearerToken);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        toast.error(`读取密钥失败: ${String(e)}`);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [provider]);
 
   async function handleSubmit(data: ProviderInput) {
     if (!provider) return;
@@ -53,8 +74,8 @@ export function EditProviderPage() {
           name: provider.name,
           type: provider.type,
           baseUrl: provider.baseUrl,
-          apiKey: '',
-          bearerToken: '',
+          apiKey: apiKey ?? '',
+          bearerToken: bearerToken ?? '',
           wireApi: provider.wireApi,
           azureApiVersion: provider.azureApiVersion ?? '',
           model: provider.model,
@@ -65,7 +86,7 @@ export function EditProviderPage() {
         submitLabel="保存修改"
       />
       <p className="mt-2 text-xs text-slate-500">
-        提示：API Key 留空则保留原值；要更换请重新输入。
+        提示：已自动从密钥链解密预填；如需更换请重新输入。
       </p>
     </div>
   );
