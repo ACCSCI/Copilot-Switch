@@ -1,0 +1,33 @@
+appId: com.copilotswitch.app
+productName: Copilot Switch
+directories:
+  buildResources: resources
+  output: release
+files:
+  - dist/**/*
+  - package.json
+  - '!**/.git'
+  - '!**/node_modules/*/{CHANGELOG.md,README.md,README,readme.md,readme}'
+  - '!**/node_modules/.cache'
+asarUnpack:
+  - '**/*.{node,dll}'
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: ${productName}-${version}-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  shortcutName: Copilot Switch
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  category: public.app-category.developer-tools
+linux:
+  target:
+    - AppImage
+  category: Development
+  artifactName: ${productName}-${version}.${ext}

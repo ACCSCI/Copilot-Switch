@@ -1,0 +1,298 @@
+PS C:\Users\ACCSCI> copilot help providers
+Custom Model Providers (BYOK):
+
+  Use your own model provider instead of GitHub Copilot's model routing.
+  Set the COPILOT_PROVIDER_BASE_URL environment variable to activate BYOK mode.
+  GitHub authentication is not required when using a custom provider.
+
+Environment Variables:
+
+  COPILOT_PROVIDER_BASE_URL          API endpoint URL (required to activate BYOK)
+  COPILOT_PROVIDER_TYPE              "openai" (default), "azure", or "anthropic"
+  COPILOT_PROVIDER_API_KEY           API key (optional for local providers like Ollama)
+  COPILOT_PROVIDER_BEARER_TOKEN      Bearer token (takes precedence over API key)
+  COPILOT_PROVIDER_WIRE_API          "completions" (default) or "responses"
+  COPILOT_PROVIDER_AZURE_API_VERSION Azure API version (default: versionless v1)
+
+Model Configuration:
+
+  COPILOT_MODEL                             Model name (sets both model ID and wire model)
+  COPILOT_PROVIDER_MODEL_ID                 Well-known model ID for agent config and token limits
+  COPILOT_PROVIDER_WIRE_MODEL               Model name sent to the provider API for inference
+  COPILOT_PROVIDER_MAX_PROMPT_TOKENS        Maximum prompt tokens
+  COPILOT_PROVIDER_MAX_OUTPUT_TOKENS        Maximum output tokens
+
+  A model is required for BYOK. Set COPILOT_MODEL, COPILOT_PROVIDER_MODEL_ID, or --model.
+
+  COPILOT_MODEL is the simplest option: it sets both the model ID (used internally for
+  agent configuration and token limits) and the wire model (sent to the provider).
+
+  When the wire model differs from the base model (e.g., a fine-tuned variant or
+  Azure deployment), set COPILOT_PROVIDER_MODEL_ID to a well-known base model name
+  (like "gpt-5.4" or "claude-sonnet-4") and COPILOT_PROVIDER_WIRE_MODEL to the
+  name your provider expects. Matching a well-known model ID lets the agent use
+  model-specific configuration such as tool support, token limits, and prompting
+  strategies. Without a recognized model ID, the agent falls back to safe defaults.
+  Both default to COPILOT_MODEL when not set explicitly.
+
+  Token limits are resolved in order: manual env vars → built-in model catalog → defaults.
+
+  Use "openai" type for any OpenAI-compatible endpoint, including Ollama, vLLM,
+  and Foundry Local. Use "responses" wire API for GPT-5 series models.
+
+Examples:
+
+  # Ollama (local, no API key required)
+  $ COPILOT_PROVIDER_BASE_URL=http://localhost:11434/v1 \
+    COPILOT_MODEL=deepseek-coder-v2:16b \
+    copilot
+
+  # Custom OpenAI-compatible endpoint
+  $ COPILOT_PROVIDER_BASE_URL=https://my-api.example.com/v1 \
+    COPILOT_PROVIDER_API_KEY=sk-... \
+    COPILOT_MODEL=gpt-4 \
+    copilot
+
+  # Azure OpenAI with a custom wire model
+  $ COPILOT_PROVIDER_TYPE=azure \
+    COPILOT_PROVIDER_BASE_URL=https://my-resource.openai.azure.com \
+    COPILOT_PROVIDER_API_KEY=your-key-here \
+    COPILOT_PROVIDER_MODEL_ID=gpt-4 \
+    COPILOT_PROVIDER_WIRE_MODEL=my-gpt4-deployment \
+    copilot
+
+  # Anthropic
+  $ COPILOT_PROVIDER_TYPE=anthropic \
+    COPILOT_PROVIDER_BASE_URL=https://api.anthropic.com \
+    COPILOT_PROVIDER_API_KEY=sk-ant-... \
+    COPILOT_MODEL=claude-sonnet-4-20250514 \
+    copilot
+
+Notes:
+  - For Azure endpoints, use type "azure" (not "openai") and provide only the
+    host URL (e.g., https://my-resource.openai.azure.com). The SDK constructs
+    the full path automatically.
+  - See `copilot help environment` for quick reference of all environment variables.
+PS C:\Users\ACCSCI> copilot help environment
+Environment Variables:
+
+  `COLORFGBG`: fallback to detect dark / light backgrounds; uses form of "fg;bg" where each field is a number from 0-15 corresponding to ANSI colors.
+
+  `COPILOT_ALLOW_ALL`: allow all tools to run automatically without confirmation when set to "true".
+
+  `COPILOT_AUTO_UPDATE`: set to "false" to disable downloading updated CLI versions automatically. Can also be disabled with the --no-auto-update flag. Auto-update is enabled by default, except in CI environments (detected via `CI`, `BUILD_NUMBER`, `RUN_ID`, or `SYSTEM_COLLECTIONURI` environment variables), where it is disabled by default.
+
+  `COPILOT_CUSTOM_INSTRUCTIONS_DIRS`: comma-separated list of additional directories to search for custom instructions files (in addition to git root and current working directory).
+
+  `COPILOT_EDITOR`, `VISUAL`, `EDITOR` (in order of precedence): command used to interactively edit a file (e.g., the plan).
+
+  `COPILOT_GITHUB_TOKEN`, `GH_TOKEN`, `GITHUB_TOKEN` (in order of precedence): an authentication token that takes precedence over previously stored credentials.
+
+  `COPILOT_HOME`: override the directory where configuration and state files are stored; defaults to `$HOME/.copilot`.
+
+  `COPILOT_MODEL`: optionally set the agent model. Can be overridden by the --model command line option or the /model command.
+
+  `COPILOT_OFFLINE`: set to "true" to enable offline mode. When active, the CLI skips all network access: GitHub authentication, telemetry, web tools, GitHub MCP server, and auto-update are disabled. Requires a local model provider (COPILOT_PROVIDER_BASE_URL).
+
+  `COPILOT_PROVIDER_BASE_URL`: API endpoint URL for a custom model provider (BYOK). When set, the CLI uses this provider instead of GitHub Copilot's model routing. GitHub authentication is not required.
+
+  `COPILOT_PROVIDER_TYPE`: provider type when using BYOK. One of "openai" (default), "azure", or "anthropic". Use "openai" for OpenAI-compatible endpoints including Ollama, vLLM, and Foundry Local.
+
+  `COPILOT_PROVIDER_API_KEY`: API key for the custom provider. Optional for local providers like Ollama.
+
+  `COPILOT_PROVIDER_BEARER_TOKEN`: bearer token for custom provider authentication. Takes precedence over COPILOT_PROVIDER_API_KEY.
+
+  `COPILOT_PROVIDER_WIRE_API`: API format for the custom provider. One of "completions" (default) or "responses". Use "responses" for GPT-5 series models.
+
+  `COPILOT_PROVIDER_AZURE_API_VERSION`: Azure API version when using type "azure". When omitted, uses the GA versionless v1 route. Set explicitly (e.g. "2024-10-21") to use the legacy versioned deployment route.
+
+  `COPILOT_PROVIDER_MODEL_ID`: well-known model ID used for agent configuration and token limits. Defaults to COPILOT_MODEL.
+
+  `COPILOT_PROVIDER_WIRE_MODEL`: model name sent to the provider API for inference. Defaults to COPILOT_MODEL.
+
+  `COPILOT_PROVIDER_MAX_PROMPT_TOKENS`: maximum prompt tokens for the BYOK model. Overrides both catalog and default values.
+
+  `COPILOT_PROVIDER_MAX_OUTPUT_TOKENS`: maximum output tokens for the BYOK model. Overrides both catalog and default values.
+
+  `GH_HOST`: GitHub hostname for authentication and API requests; defaults to "github.com". Set this to your GitHub Enterprise Cloud with data residency hostname (e.g., "mycompany.ghe.com"). Use when both GitHub CLI and Copilot CLI should target the same host.
+
+  `COPILOT_GH_HOST`: GitHub hostname used only by Copilot CLI for authentication and API requests, overriding GH_HOST when set. Useful when GH_HOST points to a GitHub Enterprise Server instance but Copilot CLI needs to authenticate against github.com or a GitHub Enterprise Cloud with data residency hostname instead.
+
+  `HTTP_PROXY`, `HTTPS_PROXY` (case-insensitive): proxy server URL for outgoing HTTP and HTTPS connections respectively (e.g., "http://proxy.example.com:8080").
+
+  `NO_COLOR`: when set (to any value), disables color output. See https://no-color.org/ for details.
+
+  `NO_PROXY` (case-insensitive): comma-separated list of hostnames or patterns that should bypass the proxy (e.g., "localhost,127.0.0.1,.example.com").
+
+  `PLAIN_DIFF`: when set to "true", disables rich diff rendering (syntax highlighting via diff tool specified by git config). Can also be set with the --plain-diff flag.
+
+  `USE_BUILTIN_RIPGREP`: when set to "false", uses the ripgrep binary from PATH instead of the bundled version.
+
+  `USE_TGREP`: overrides the TGREP feature flag. When set to "true", always enables tgrep indexed search regardless of repository size. When set to "false", disables tgrep and uses ripgrep.
+
+  `USE_TGREP_WARM_START`: when set to "true", blocks Copilot CLI startup until the tgrep index is ready when tgrep starts. Useful for evaluating tgrep search against a warm index.
+
+  OpenTelemetry / Monitoring:
+
+  `COPILOT_OTEL_ENABLED`: set to "true" to explicitly enable OpenTelemetry instrumentation.
+
+  `OTEL_EXPORTER_OTLP_ENDPOINT`: OTLP endpoint URL. Setting this automatically enables OTel.
+
+  `COPILOT_OTEL_EXPORTER_TYPE`: Copilot exporter backend; "otlp-http" (default) or "file" for local JSON-lines output.
+
+  `OTEL_EXPORTER_OTLP_PROTOCOL`: OTLP HTTP protocol for the "otlp-http" exporter; "http/json" (default) or "http/protobuf". Use `OTEL_EXPORTER_OTLP_TRACES_PROTOCOL` or `OTEL_EXPORTER_OTLP_METRICS_PROTOCOL` to override per signal.
+
+  `COPILOT_OTEL_FILE_EXPORTER_PATH`: file path for JSON-lines output. Setting this automatically enables OTel.
+
+  `COPILOT_OTEL_SOURCE_NAME`: instrumentation scope name for tracer and meter; defaults to "github.copilot".
+
+  `OTEL_SERVICE_NAME`: service name in resource attributes; defaults to "github-copilot".
+
+  `OTEL_RESOURCE_ATTRIBUTES`: extra resource attributes as comma-separated key=value pairs.
+
+  `OTEL_EXPORTER_OTLP_HEADERS`: authentication headers for the OTLP exporter (e.g., "Authorization=Bearer token").
+
+  `OTEL_EXPORTER_OTLP_CERTIFICATE`: path to a PEM file with extra CA certificate(s) to trust for the OTLP endpoint (e.g., a private/corporate CA). Merged with the OS trust store. Per-signal: `OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE`, `OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE`.
+
+  `OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE` / `OTEL_EXPORTER_OTLP_CLIENT_KEY`: paths to the client certificate and (unencrypted) private key PEM files for mutual TLS (mTLS). Both must be set together. Per-signal variants are supported.
+
+  `OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT`: set to "true" to capture full prompt/response content.
+
+  `OTEL_LOG_LEVEL`: OTel diagnostic log level (not the CLI --log-level). One of: NONE, ERROR, WARN, INFO, DEBUG, VERBOSE, ALL.
+
+  See `copilot help monitoring` for detailed configuration and examples.
+PS C:\Users\ACCSCI> copilot help monitoring
+Monitoring with OpenTelemetry:
+
+  The CLI can export traces and metrics via OpenTelemetry (OTel), giving you visibility into
+  agent interactions, LLM calls, tool executions, and token usage. All signal names and
+  attributes follow the OTel GenAI Semantic Conventions, so the data works with any
+  OTel-compatible backend (Jaeger, Grafana, Azure Monitor, Datadog, Honeycomb, Langfuse, etc.).
+
+  OTel is off by default. When disabled, no instrumentation or exporters are initialized.
+
+Activation:
+
+  OTel activates when any of these conditions are met:
+
+  - COPILOT_OTEL_ENABLED=true
+  - OTEL_EXPORTER_OTLP_ENDPOINT is set
+  - COPILOT_OTEL_FILE_EXPORTER_PATH is set
+
+Environment Variables:
+
+  COPILOT_OTEL_ENABLED                                 Explicitly enable OTel; defaults to "false".
+
+  OTEL_EXPORTER_OTLP_ENDPOINT                          OTLP endpoint URL. Setting this auto-enables OTel.
+
+  COPILOT_OTEL_EXPORTER_TYPE                           Copilot exporter backend: "otlp-http" (default) or "file".
+                                                       Auto-selects "file" when COPILOT_OTEL_FILE_EXPORTER_PATH is set.
+
+  OTEL_EXPORTER_OTLP_PROTOCOL                          OTLP HTTP protocol for "otlp-http": "http/json" (default) or "http/protobuf".
+                                                       Does not apply to the "file" exporter.
+                                                       OTEL_EXPORTER_OTLP_TRACES_PROTOCOL and
+                                                       OTEL_EXPORTER_OTLP_METRICS_PROTOCOL override it per signal.
+                                                       Unsupported values, including "grpc", warn and fall back.
+
+  COPILOT_OTEL_FILE_EXPORTER_PATH                      Write all signals to this file as JSON-lines.
+                                                       Setting this auto-enables OTel.
+
+  COPILOT_OTEL_SOURCE_NAME                             Instrumentation scope name; defaults to "github.copilot".
+
+  OTEL_SERVICE_NAME                                    Service name in resource attributes; defaults to "github-copilot".
+
+  OTEL_RESOURCE_ATTRIBUTES                             Extra resource attributes (comma-separated key=value pairs;
+                                                       use percent-encoding for special characters).
+
+  OTEL_EXPORTER_OTLP_HEADERS                           Auth headers for the OTLP exporter
+                                                       (e.g., "Authorization=Bearer token").
+                                                       Prefer env files or a secret manager over inline tokens.
+
+  OTEL_EXPORTER_OTLP_CERTIFICATE                       Path to a PEM file with extra CA certificate(s) to trust for
+                                                       the OTLP endpoint (e.g., a private/corporate CA). Merged with
+                                                       the OS trust store, so public-CA endpoints still validate.
+                                                       OTEL_EXPORTER_OTLP_TRACES_CERTIFICATE and
+                                                       OTEL_EXPORTER_OTLP_METRICS_CERTIFICATE override it per signal.
+
+  OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE                Path to the client certificate PEM for mutual TLS (mTLS).
+  OTEL_EXPORTER_OTLP_CLIENT_KEY                        Path to the matching unencrypted private key PEM. Both must be
+                                                       set together; passphrase-protected keys are not supported.
+                                                       OTEL_EXPORTER_OTLP_TRACES_CLIENT_CERTIFICATE/_CLIENT_KEY and
+                                                       OTEL_EXPORTER_OTLP_METRICS_CLIENT_CERTIFICATE/_CLIENT_KEY
+                                                       override them per signal.
+                                                       The CLIENT_* and CERTIFICATE settings only take effect with an
+                                                       https:// OTLP endpoint; configuring them with an http:// endpoint
+                                                       (or with no endpoint, since the default is http) fails startup
+                                                       rather than exporting telemetry in cleartext.
+                                                       Note: NODE_EXTRA_CA_CERTS does not affect the OTLP exporter,
+                                                       which uses a native (Rust) HTTP transport; use the variables
+                                                       above instead.
+
+  OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT   Capture full prompt/response content; defaults to "false".
+                                                       See "Content Capture" below.
+
+  OTEL_LOG_LEVEL                                       OTel diagnostic log level (not the CLI --log-level).
+                                                       One of: NONE, ERROR, WARN, INFO, DEBUG, VERBOSE, ALL.
+
+What Gets Exported:
+
+  Traces — a hierarchical span tree for each agent interaction:
+
+    invoke_agent                               Agent orchestration (all LLM calls + tool executions)
+      plan                                     Plan-mode task decomposition
+        chat <model>                           LLM calls used to generate the plan
+        execute_tool <tool>                    Tool calls used while planning
+      chat <model>                             Individual LLM API call
+      execute_tool <tool>                      Individual tool invocation
+
+  Spans carry attributes such as model name, token counts, durations, costs, and error info.
+  Subagent invocations are automatically linked into the same trace via context propagation.
+
+  Metrics:
+
+    gen_ai.client.operation.duration           LLM/agent call duration (histogram, seconds)
+    gen_ai.client.token.usage                  Token counts by type (histogram, tokens)
+    github.copilot.tool.call.count             Tool invocations (counter)
+    github.copilot.tool.call.duration          Tool execution latency (histogram, seconds)
+    github.copilot.agent.turn.count            LLM round-trips per invocation (histogram)
+
+Content Capture:
+
+  By default, no prompt content, responses, or tool arguments are captured — only metadata.
+  Set OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true to also capture:
+
+  - Full prompt and response messages
+  - System instructions and tool definitions
+  - Tool call arguments and results
+
+  Warning: content capture may include sensitive information such as code, file contents,
+  and user prompts. Only enable in trusted environments.
+
+Examples:
+
+  # OTLP/HTTP to a local collector (e.g., Jaeger)
+  $ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 copilot
+
+  # OTLP/HTTP protobuf to a local collector
+  $ OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 \
+    OTEL_EXPORTER_OTLP_PROTOCOL=http/protobuf \
+    copilot
+
+  # File-based output (offline / CI)
+  $ COPILOT_OTEL_FILE_EXPORTER_PATH=/tmp/copilot-otel.jsonl copilot
+
+  # Remote collector with authentication and content capture
+  $ OTEL_EXPORTER_OTLP_ENDPOINT=https://collector.example.com:4318 \
+    OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token" \
+    OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true \
+    copilot
+
+  # Enterprise collector behind a private CA with mutual TLS (mTLS)
+  $ OTEL_EXPORTER_OTLP_ENDPOINT=https://collector.internal:4318 \
+    OTEL_EXPORTER_OTLP_CERTIFICATE=/etc/otel/ca.pem \
+    OTEL_EXPORTER_OTLP_CLIENT_CERTIFICATE=/etc/otel/client.pem \
+    OTEL_EXPORTER_OTLP_CLIENT_KEY=/etc/otel/client.key \
+    copilot
+
+For full details on span attributes, metric definitions, span events, and advanced
+configuration, see the monitoring guide at docs/cli/reference/monitoring.md.
