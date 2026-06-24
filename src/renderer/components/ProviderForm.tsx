@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { providerInputSchema, type ProviderInput } from '@shared/schemas';
@@ -12,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Save, X } from 'lucide-react';
+import { Save, X, Eye, EyeOff } from 'lucide-react';
 
 interface ProviderFormProps {
   defaultValues?: Partial<ProviderInput>;
@@ -51,6 +52,8 @@ export function ProviderForm({
 
   const type = watch('type');
   const wireApi = watch('wireApi');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [showBearer, setShowBearer] = useState(false);
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -135,14 +138,27 @@ export function ProviderForm({
             {/* API Key */}
             <div className="space-y-2">
               <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="sk-..."
-                data-testid="input-api-key"
-                autoComplete="off"
-                {...register('apiKey')}
-              />
+              <div className="relative">
+                <Input
+                  id="apiKey"
+                  type={showApiKey ? 'text' : 'password'}
+                  placeholder="sk-..."
+                  data-testid="input-api-key"
+                  autoComplete="off"
+                  className="pr-10"
+                  {...register('apiKey')}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showApiKey ? '隐藏 API Key' : '显示 API Key'}
+                  data-testid="toggle-api-key"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowApiKey((v) => !v)}
+                >
+                  {showApiKey ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               <p className="text-xs text-slate-500">使用系统密钥链加密存储</p>
               {errors.apiKey && <p className="text-xs text-red-500">{errors.apiKey.message}</p>}
             </div>
@@ -150,14 +166,27 @@ export function ProviderForm({
             {/* Bearer Token */}
             <div className="space-y-2">
               <Label htmlFor="bearerToken">Bearer Token（可选）</Label>
-              <Input
-                id="bearerToken"
-                type="password"
-                placeholder="可选，与 API Key 互斥"
-                data-testid="input-bearer-token"
-                autoComplete="off"
-                {...register('bearerToken')}
-              />
+              <div className="relative">
+                <Input
+                  id="bearerToken"
+                  type={showBearer ? 'text' : 'password'}
+                  placeholder="可选，与 API Key 互斥"
+                  data-testid="input-bearer-token"
+                  autoComplete="off"
+                  className="pr-10"
+                  {...register('bearerToken')}
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showBearer ? '隐藏 Bearer Token' : '显示 Bearer Token'}
+                  data-testid="toggle-bearer-token"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  onClick={() => setShowBearer((v) => !v)}
+                >
+                  {showBearer ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                </button>
+              </div>
               {errors.bearerToken && (
                 <p className="text-xs text-red-500">{errors.bearerToken.message}</p>
               )}

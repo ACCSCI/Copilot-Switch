@@ -14,8 +14,10 @@ export function EditProviderPage() {
   const upsert = useProviderStore((s) => s.upsert);
   const providers = useProviderStore((s) => s.providers);
   const [provider, setProvider] = useState<ProviderDTO | null>(null);
-  const [apiKey, setApiKey] = useState<string | undefined>(undefined);
-  const [bearerToken, setBearerToken] = useState<string | undefined>(undefined);
+  /** 解密后的原始密钥，用于"未改动则不写回"判断 */
+  const [originalApiKey, setOriginalApiKey] = useState('');
+  const [originalBearer, setOriginalBearer] = useState('');
+  const [defaults, setDefaults] = useState<Partial<ProviderInput> | null>(null);
 
   useEffect(() => {
     const p = providers.find((x) => x.id === id);
@@ -29,8 +31,21 @@ export function EditProviderPage() {
       .getSecrets(provider.id)
       .then((s) => {
         if (cancelled) return;
-        setApiKey(s.apiKey);
-        setBearerToken(s.bearerToken);
+        const apiKey = s.apiKey ?? '';
+        const bearerToken = s.bearerToken ?? '';
+        setOriginalApiKey(apiKey);
+        setOriginalBearer(bearerToken);
+        setDefaults({
+          name: provider.name,
+          type: provider.type,
+          baseUrl: provider.baseUrl,
+          apiKey,
+          bearerToken,
+          wireApi: provider.wireApi,
+          azureApiVersion: provider.azureApiVersion ?? '',
+          model: provider.model,
+          icon: provider.icon ?? '',
+        });
       })
       .catch((e) => {
         if (cancelled) return;
@@ -43,8 +58,14 @@ export function EditProviderPage() {
 
   async function handleSubmit(data: ProviderInput) {
     if (!provider) return;
+    // 未编辑的密钥：与服务端原值相同则置空，跳过 setEncryptedSecrets
+    const payload: ProviderInput = {
+      ...data,
+      apiKey: data.apiKey === originalApiKey ? '' : data.apiKey,
+      bearerToken: data.bearerToken === originalBearer ? '' : data.bearerToken,
+    };
     try {
-      const dto = await window.api.providers.update(provider.id, data);
+      const dto = await window.api.providers.update(provider.id, payload);
       upsert(dto);
       toast.success('已更新');
       void navigate({ to: '/' });
@@ -61,6 +82,14 @@ export function EditProviderPage() {
     );
   }
 
+  if (!defaults) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <p>正在解密密钥...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl p-6">
       <div className="mb-4 flex items-center gap-2">
@@ -70,23 +99,13 @@ export function EditProviderPage() {
         <h1 className="text-2xl font-bold text-slate-900">编辑 {provider.name}</h1>
       </div>
       <ProviderForm
-        defaultValues={{
-          name: provider.name,
-          type: provider.type,
-          baseUrl: provider.baseUrl,
-          apiKey: apiKey ?? '',
-          bearerToken: bearerToken ?? '',
-          wireApi: provider.wireApi,
-          azureApiVersion: provider.azureApiVersion ?? '',
-          model: provider.model,
-          icon: provider.icon ?? '',
-        }}
+        defaultValues={defaults}
         onSubmit={handleSubmit}
         onCancel={() => navigate({ to: '/' })}
         submitLabel="保存修改"
       />
       <p className="mt-2 text-xs text-slate-500">
-        提示：已自动从密钥链解密预填；如需更换请重新输入。
+        提示：已自动从密钥链解密预填；如需更换请重新输入，未修改则保留原值。
       </p>
     </div>
   );
