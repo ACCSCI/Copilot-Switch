@@ -6,7 +6,6 @@ import {
   Copy,
   Activity,
   BarChart3,
-  Terminal,
   Trash2,
   Play,
   Check,
@@ -219,20 +218,6 @@ export function ProviderCard({ provider, onEdit, onDelete, onStats }: ProviderCa
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => window.api.cli.openTerminal()}
-                aria-label="终端"
-              >
-                <Terminal className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>打开终端</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
                 data-testid="action-delete"
                 onClick={() => onDelete(provider)}
                 aria-label="删除"
@@ -255,9 +240,6 @@ export function ProviderCard({ provider, onEdit, onDelete, onStats }: ProviderCa
               <DropdownMenuItem onClick={handleCopy}>复制摘要</DropdownMenuItem>
               <DropdownMenuItem onClick={handlePing}>健康检查</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onStats(provider)}>查看统计</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => window.api.cli.openTerminal()}>
-                打开终端
-              </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDelete(provider)}
                 className="text-red-500 focus:text-red-500"

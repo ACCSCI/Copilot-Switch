@@ -1,6 +1,5 @@
 import { test, expect } from '../fixtures/electron';
 import { HomePage } from '../pages/HomePage';
-import { AddProviderPage } from '../pages/AddProviderPage';
 import { faker } from '@faker-js/faker';
 
 test.describe('添加供应商（用户流程）', () => {

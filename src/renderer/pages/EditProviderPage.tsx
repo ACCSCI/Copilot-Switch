@@ -14,8 +14,7 @@ export function EditProviderPage() {
   const upsert = useProviderStore((s) => s.upsert);
   const providers = useProviderStore((s) => s.providers);
   const [provider, setProvider] = useState<ProviderDTO | null>(null);
-  const [apiKey, setApiKey] = useState<string | undefined>(undefined);
-  const [bearerToken, setBearerToken] = useState<string | undefined>(undefined);
+  const [defaults, setDefaults] = useState<Partial<ProviderInput> | null>(null);
 
   useEffect(() => {
     const p = providers.find((x) => x.id === id);
@@ -29,8 +28,17 @@ export function EditProviderPage() {
       .getSecrets(provider.id)
       .then((s) => {
         if (cancelled) return;
-        setApiKey(s.apiKey);
-        setBearerToken(s.bearerToken);
+        setDefaults({
+          name: provider.name,
+          type: provider.type,
+          baseUrl: provider.baseUrl,
+          apiKey: s.apiKey ?? '',
+          bearerToken: s.bearerToken ?? '',
+          wireApi: provider.wireApi,
+          azureApiVersion: provider.azureApiVersion ?? '',
+          model: provider.model,
+          icon: provider.icon ?? '',
+        });
       })
       .catch((e) => {
         if (cancelled) return;
@@ -43,6 +51,10 @@ export function EditProviderPage() {
 
   async function handleSubmit(data: ProviderInput) {
     if (!provider) return;
+    // 直接提交完整表单数据：后端 providers:update 在收到任意密钥字段时
+    // 总是覆盖写入（IPC round-trip 开销可忽略）。这样：
+    // 1. 用户只改 bearerToken 时 apiKey 不会被误清空
+    // 2. 用户主动清空密钥也能真正写入 null
     try {
       const dto = await window.api.providers.update(provider.id, data);
       upsert(dto);
@@ -61,6 +73,14 @@ export function EditProviderPage() {
     );
   }
 
+  if (!defaults) {
+    return (
+      <div className="mx-auto max-w-3xl p-6">
+        <p>正在解密密钥...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-3xl p-6">
       <div className="mb-4 flex items-center gap-2">
@@ -70,17 +90,7 @@ export function EditProviderPage() {
         <h1 className="text-2xl font-bold text-slate-900">编辑 {provider.name}</h1>
       </div>
       <ProviderForm
-        defaultValues={{
-          name: provider.name,
-          type: provider.type,
-          baseUrl: provider.baseUrl,
-          apiKey: apiKey ?? '',
-          bearerToken: bearerToken ?? '',
-          wireApi: provider.wireApi,
-          azureApiVersion: provider.azureApiVersion ?? '',
-          model: provider.model,
-          icon: provider.icon ?? '',
-        }}
+        defaultValues={defaults}
         onSubmit={handleSubmit}
         onCancel={() => navigate({ to: '/' })}
         submitLabel="保存修改"

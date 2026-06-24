@@ -1,7 +1,7 @@
 import { test, expect } from '../fixtures/electron';
 
 test.describe('应用启动', () => {
-  test('应用启动后看到主标题与空态', async ({ page, app }) => {
+  test('应用启动后看到主标题与空态', async ({ page }) => {
     // 等待 dev server 加载完成
     await page.waitForLoadState('domcontentloaded');
     // 调试：打印当前 URL 和 HTML

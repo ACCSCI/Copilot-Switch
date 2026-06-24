@@ -53,8 +53,14 @@ function runPersist(key: string, value: string, persist: PlatformPersist): void 
   if (!cmd) return;
   try {
     persist.execFn(cmd.exe, cmd.args, { stdio: 'ignore', timeout: 5000 });
-  } catch {
+    logger.info('persist ok', { key, platform: persist.platform });
+  } catch (e) {
     // 持久化失败不阻塞激活（process.env 已设置）
+    logger.warn('persist failed', {
+      key,
+      cmd,
+      error: e instanceof Error ? e.message : String(e),
+    });
   }
 }
 
@@ -109,7 +115,9 @@ export async function activateProvider(
   let bearerToken = '';
   try {
     apiKey = provider.api_key_encrypted ? decryptSecret(provider.api_key_encrypted) : '';
-    bearerToken = provider.bearer_token_encrypted ? decryptSecret(provider.bearer_token_encrypted) : '';
+    bearerToken = provider.bearer_token_encrypted
+      ? decryptSecret(provider.bearer_token_encrypted)
+      : '';
   } catch (e) {
     logger.error('activateProvider: decrypt failed', {
       id: providerId,
@@ -153,7 +161,13 @@ export async function activateProvider(
  * 使用 ENV_VAR_MATRIX 统一命名（COPILOT_PROVIDER_* 命名空间）。
  */
 function buildEnvVars(
-  provider: { type: string; base_url: string; model: string; wire_api: string; azure_api_version?: string | null },
+  provider: {
+    type: string;
+    base_url: string;
+    model: string;
+    wire_api: string;
+    azure_api_version?: string | null;
+  },
   apiKey: string,
   bearerToken: string,
 ): EnvVarMap {
