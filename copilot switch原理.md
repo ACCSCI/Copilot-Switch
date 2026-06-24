@@ -1,3 +1,4 @@
+https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/use-byok-models
 # Using your own LLM models in GitHub Copilot CLI
 
 Use a model from an external provider of your choice in Copilot by supplying your own API key.
