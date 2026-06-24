@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { exec } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { setDb, closeDb } from '../../db/client';
 import { providerRepo } from '../../db/repository';
 import { encryptSecret } from '../crypto';
@@ -16,14 +16,14 @@ vi.mock('electron', () => ({
   },
 }));
 
-// mock child_process.exec
+// mock child_process.execFileSync：始终成功，记录每次调用的 (exe, args, options)
 vi.mock('node:child_process', () => ({
-  exec: vi.fn((_cmd: string, cb: (err: null) => void) => cb(null)),
+  execFileSync: vi.fn(),
 }));
 
 import { activateProvider, getEnvSnapshot, persistEnvVars, type PlatformPersist } from '../envSwitcher';
 
-const execMock = vi.mocked(exec);
+const execMock = vi.mocked(execFileSync);
 
 function freshDb() {
   closeDb();
@@ -87,6 +87,7 @@ describe('envSwitcher.activateProvider', () => {
   beforeEach(async () => {
     freshDb();
     execMock.mockClear();
+    execMock.mockReturnValue(Buffer.from(''));
   });
 
   afterEach(() => {
@@ -119,7 +120,8 @@ describe('envSwitcher.activateProvider', () => {
 
     expect(env.AZURE_OPENAI_KEY).toBe('azure-key');
     expect(env.AZURE_OPENAI_BASE_URL).toBe('https://my.openai.azure.com');
-    expect(env.AZURE_API_VERSION).toBe('2024-10-21');
+    // PR #2 起 azureApiVersion 写入 COPILOT_PROVIDER_AZURE_API_VERSION 命名空间
+    expect(process.env.COPILOT_PROVIDER_AZURE_API_VERSION).toBe('2024-10-21');
   });
 
   it('切换供应商：清理上一家所有 BYOK 变量', async () => {
@@ -135,27 +137,44 @@ describe('envSwitcher.activateProvider', () => {
     expect(process.env.ANTHROPIC_API_KEY).toBe('sk-ant-test');
   });
 
-  it('激活后调用 setx 持久化到用户环境', async () => {
+  it('激活后用 reg add 持久化到用户环境（Windows execFile）', async () => {
     const id = await seedOpenAiProvider();
-    await activateProvider(id);
+    // 强制 win32 平台以便断言 reg add（默认 process.platform 在 CI 不可控）
+    const callsBefore = execMock.mock.calls.length;
+    await activateProvider(id, { platform: 'win32', execFn: execMock as never });
 
-    const calls = execMock.mock.calls.map((c) => c[0] as string);
-    console.log('ALL CALLS:', calls);
-    expect(calls.some((c) => c.startsWith('setx OPENAI_API_KEY'))).toBe(true);
-    expect(calls.some((c) => c.startsWith('setx OPENAI_BASE_URL'))).toBe(true);
-    expect(calls.some((c) => c.startsWith('setx COPILOT_MODEL'))).toBe(true);
+    // 找到所有 reg add 调用并检查参数化传递
+    const newCalls = execMock.mock.calls.slice(callsBefore);
+    const regAddCalls = newCalls.filter((c) => {
+      const args = c[1] as string[] | undefined;
+      return c[0] === 'reg' && args?.[0] === 'add';
+    });
+    expect(regAddCalls.length).toBeGreaterThan(0);
+    // 找到包含 OPENAI_API_KEY 的 reg add
+    const openaiCall = regAddCalls.find((c) => (c[1] as string[])?.includes('OPENAI_API_KEY'));
+    expect(openaiCall).toBeDefined();
+    // args 形如 ['add', 'HKCU\\Environment', '/v', 'OPENAI_API_KEY', '/t', 'REG_SZ', '/d', value, '/f']
+    const openaiArgs = openaiCall?.[1] as string[];
+    expect(openaiArgs).toContain('OPENAI_API_KEY');
+    expect(openaiArgs).toContain('sk-test-openai');
   });
 
-  it('切换后用 setx 清理掉之前残留的变量', async () => {
+  it('切换后用 reg delete 清理掉之前残留的变量', async () => {
     const openaiId = await seedOpenAiProvider();
     const anthropicId = await seedAnthropicProvider();
 
-    await activateProvider(openaiId);
+    await activateProvider(openaiId, { platform: 'win32', execFn: execMock as never });
     execMock.mockClear();
-    await activateProvider(anthropicId);
+    await activateProvider(anthropicId, { platform: 'win32', execFn: execMock as never });
 
-    const calls = execMock.mock.calls.map((c) => c[0] as string);
-    expect(calls.some((c) => c.includes('OPENAI_API_KEY') && c.includes('reg delete'))).toBe(true);
+    // 应有 OPENAI_API_KEY 的 reg delete
+    const regDelete = execMock.mock.calls.find((c) => {
+      const args = c[1] as string[] | undefined;
+      return (
+        c[0] === 'reg' && args?.[0] === 'delete' && args?.includes('OPENAI_API_KEY')
+      );
+    });
+    expect(regDelete).toBeDefined();
   });
 
   it('不存在的 providerId 抛错', async () => {
@@ -173,35 +192,79 @@ describe('envSwitcher.activateProvider', () => {
 describe('envSwitcher.persistEnvVars', () => {
   beforeEach(() => {
     execMock.mockClear();
+    execMock.mockReturnValue(Buffer.from(''));
   });
 
-  it('Windows 平台用 setx', async () => {
-    const platform = 'win32';
-    const persist: PlatformPersist = { platform, execFn: execMock as never };
-    await persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist);
-    expect(execMock).toHaveBeenCalled();
-    const cmd = execMock.mock.calls[0]?.[0] as string;
-    expect(cmd).toMatch(/^setx OPENAI_API_KEY/);
-  });
-
-  it('空值时调用 reg delete', async () => {
+  it('Windows 平台用 reg add 持久化', () => {
     const persist: PlatformPersist = { platform: 'win32', execFn: execMock as never };
-    await persistEnvVars({ OPENAI_API_KEY: '' }, persist);
-    const cmd = execMock.mock.calls[0]?.[0] as string;
-    expect(cmd).toMatch(/^reg delete/);
+    persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist);
+    expect(execMock).toHaveBeenCalled();
+    // 首参 exe='reg'，次参 args 数组包含 /d 'sk-test'
+    const call = execMock.mock.calls[0] as readonly [unknown, ...unknown[]];
+    const exe = call[0];
+    const args = call[1] as string[];
+    expect(exe).toBe('reg');
+    expect(args).toContain('add');
+    expect(args).toContain('sk-test');
   });
 
-  it('非 Windows 平台用 launchctl setenv（macOS）', async () => {
+  it('空值时调用 reg delete', () => {
+    const persist: PlatformPersist = { platform: 'win32', execFn: execMock as never };
+    persistEnvVars({ OPENAI_API_KEY: '' }, persist);
+    const call = execMock.mock.calls[0] as readonly [unknown, ...unknown[]];
+    const exe = call[0];
+    const args = call[1] as string[];
+    expect(exe).toBe('reg');
+    expect(args).toContain('delete');
+    expect(args).toContain('OPENAI_API_KEY');
+  });
+
+  it('非 Windows 平台用 launchctl setenv（macOS）', () => {
     const persist: PlatformPersist = { platform: 'darwin', execFn: execMock as never };
-    await persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist);
-    const cmd = execMock.mock.calls[0]?.[0] as string;
-    expect(cmd).toMatch(/^launchctl setenv/);
+    persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist);
+    const call = execMock.mock.calls[0] as readonly [unknown, ...unknown[]];
+    const exe = call[0];
+    const args = call[1] as string[];
+    expect(exe).toBe('launchctl');
+    expect(args).toContain('setenv');
+    expect(args).toContain('sk-test');
   });
 
-  it('Linux 跳过持久化（无统一方案）', async () => {
+  it('macOS 空值时调用 launchctl unsetenv', () => {
+    const persist: PlatformPersist = { platform: 'darwin', execFn: execMock as never };
+    persistEnvVars({ OPENAI_API_KEY: '' }, persist);
+    const call = execMock.mock.calls[0] as readonly [unknown, ...unknown[]];
+    const exe = call[0];
+    const args = call[1] as string[];
+    expect(exe).toBe('launchctl');
+    expect(args).toContain('unsetenv');
+  });
+
+  it('Linux 跳过持久化（无统一方案）', () => {
     const persist: PlatformPersist = { platform: 'linux', execFn: execMock as never };
-    await persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist);
+    persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist);
     expect(execMock).not.toHaveBeenCalled();
+  });
+
+  it('exec 失败不抛错（被 try/catch 吞掉）', () => {
+    execMock.mockImplementation(() => {
+      throw new Error('boom');
+    });
+    const persist: PlatformPersist = { platform: 'win32', execFn: execMock as never };
+    expect(() => persistEnvVars({ OPENAI_API_KEY: 'sk-test' }, persist)).not.toThrow();
+  });
+
+  it('特殊字符作为独立 args 元素传入（不经过 shell 解释）', () => {
+    // 验证：值含 shell 特殊字符（%、&、$、`）也能安全传递
+    const persist: PlatformPersist = { platform: 'win32', execFn: execMock as never };
+    const dangerous = 'sk-pwn%PATH%&whoami`evil`';
+    persistEnvVars({ OPENAI_API_KEY: dangerous }, persist);
+    const call = execMock.mock.calls[0] as readonly [unknown, ...unknown[]];
+    const exe = call[0];
+    const args = call[1] as string[];
+    // 整个 value 必须作为单个 args 元素出现，证明没被 shell 拼接
+    expect(exe).toBe('reg');
+    expect(args).toContain(dangerous);
   });
 });
 

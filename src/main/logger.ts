@@ -3,8 +3,10 @@
  * - 写入 app.getPath('logs')/copilot-switch/app.log
  * - 支持 info/warn/error/debug 四个级别
  * - 5MB 自动轮转
+ * - 读取走异步 fs.promises，避免阻塞 Electron 主线程
  */
-import { appendFileSync, mkdirSync, readFileSync, statSync, renameSync, existsSync } from 'node:fs';
+import { appendFileSync, mkdirSync, statSync, renameSync, existsSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 
 // 懒加载 Electron app（避免模块级别 require electron）
@@ -58,10 +60,11 @@ export const logger = {
   error: (msg: string, data?: Record<string, unknown>) => write('ERROR', msg, data),
   debug: (msg: string, data?: Record<string, unknown>) => write('DEBUG', msg, data),
 
-  getLogs(): string[] {
+  /** 异步读取日志，避免阻塞主线程（最大 5MB，split 后返回） */
+  async getLogs(): Promise<string[]> {
     const logFile = path.join(getLogDir(), 'app.log');
     try {
-      const content = readFileSync(logFile, 'utf-8');
+      const content = await readFile(logFile, 'utf-8');
       return content.split('\n').filter(Boolean);
     } catch {
       return [];

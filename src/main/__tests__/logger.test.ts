@@ -29,34 +29,34 @@ describe('logger', () => {
     rmSync(path.join(process.cwd(), 'logs', 'copilot-switch'), { recursive: true, force: true });
   });
 
-  it('info 写入日志文件', () => {
+  it('info 写入日志文件', async () => {
     logger.info('test message');
-    const logs = logger.getLogs();
+    const logs = await logger.getLogs();
     expect(logs.length).toBe(1);
     expect(logs[0]).toContain('[INFO] test message');
   });
 
-  it('error 写入日志文件', () => {
+  it('error 写入日志文件', async () => {
     logger.error('something failed', { code: 500 });
-    const logs = logger.getLogs();
+    const logs = await logger.getLogs();
     expect(logs.length).toBe(1);
     expect(logs[0]).toContain('[ERROR] something failed');
     expect(logs[0]).toContain('500');
   });
 
-  it('debug 写入日志文件', () => {
+  it('debug 写入日志文件', async () => {
     logger.debug('verbose', { trace: 'x' });
-    const logs = logger.getLogs();
+    const logs = await logger.getLogs();
     expect(logs.length).toBe(1);
     expect(logs[0]).toContain('[DEBUG] verbose');
     expect(logs[0]).toContain('trace');
   });
 
-  it('多条日志追加写入', () => {
+  it('多条日志追加写入', async () => {
     logger.info('first');
     logger.warn('second');
     logger.error('third');
-    const logs = logger.getLogs();
+    const logs = await logger.getLogs();
     expect(logs.length).toBe(3);
     expect(logs[0]).toContain('first');
     expect(logs[1]).toContain('second');
@@ -73,6 +73,11 @@ describe('logger', () => {
   it('getLogPath 返回正确路径', () => {
     const p = logger.getLogPath();
     expect(p).toContain('app.log');
+  });
+
+  it('getLogs 不存在文件时返回空数组（不抛）', async () => {
+    const logs = await logger.getLogs();
+    expect(logs).toEqual([]);
   });
 
   it('文件大小超过 5MB 时自动轮转', () => {
@@ -101,12 +106,9 @@ describe('logger', () => {
     expect(fresh).toContain('after-rotation');
   });
 
-  it('写入失败时不抛出（容错）', async () => {
-    // 用一个不存在的根目录模拟 IO 失败场景：把 process 切到一个只读目录
-    // 后再 restore，避免污染其它用例。简单粗暴：用一个 mock 替换 write 行为不可行
-    // （ESM 命名导出无法 spy），改用「不可写父目录 + 清空 _logDir」方案不可移植。
-    // 这里改为：调用 logger 后不抛即为通过；具体静默路径已由 ensureDir/write 各自
-    // 的 try/catch 覆盖（rotate 用例间接覆盖了 mkdir 吞错）。
+  it('写入失败时不抛出（容错）', () => {
+    // 调用 logger 后不抛即为通过；具体静默路径已由 ensureDir/write 各自的
+    // try/catch 覆盖（rotate 用例间接覆盖了 mkdir 吞错）。
     expect(() => logger.info('happy path', { x: 1 })).not.toThrow();
     expect(() => logger.warn('warn path')).not.toThrow();
     expect(() => logger.debug('debug path')).not.toThrow();

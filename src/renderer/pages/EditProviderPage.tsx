@@ -14,9 +14,6 @@ export function EditProviderPage() {
   const upsert = useProviderStore((s) => s.upsert);
   const providers = useProviderStore((s) => s.providers);
   const [provider, setProvider] = useState<ProviderDTO | null>(null);
-  /** 解密后的原始密钥，用于"未改动则不写回"判断 */
-  const [originalApiKey, setOriginalApiKey] = useState('');
-  const [originalBearer, setOriginalBearer] = useState('');
   const [defaults, setDefaults] = useState<Partial<ProviderInput> | null>(null);
 
   useEffect(() => {
@@ -31,16 +28,12 @@ export function EditProviderPage() {
       .getSecrets(provider.id)
       .then((s) => {
         if (cancelled) return;
-        const apiKey = s.apiKey ?? '';
-        const bearerToken = s.bearerToken ?? '';
-        setOriginalApiKey(apiKey);
-        setOriginalBearer(bearerToken);
         setDefaults({
           name: provider.name,
           type: provider.type,
           baseUrl: provider.baseUrl,
-          apiKey,
-          bearerToken,
+          apiKey: s.apiKey ?? '',
+          bearerToken: s.bearerToken ?? '',
           wireApi: provider.wireApi,
           azureApiVersion: provider.azureApiVersion ?? '',
           model: provider.model,
@@ -58,14 +51,12 @@ export function EditProviderPage() {
 
   async function handleSubmit(data: ProviderInput) {
     if (!provider) return;
-    // 未编辑的密钥：与服务端原值相同则置空，跳过 setEncryptedSecrets
-    const payload: ProviderInput = {
-      ...data,
-      apiKey: data.apiKey === originalApiKey ? '' : data.apiKey,
-      bearerToken: data.bearerToken === originalBearer ? '' : data.bearerToken,
-    };
+    // 直接提交完整表单数据：后端 providers:update 在收到任意密钥字段时
+    // 总是覆盖写入（IPC round-trip 开销可忽略）。这样：
+    // 1. 用户只改 bearerToken 时 apiKey 不会被误清空
+    // 2. 用户主动清空密钥也能真正写入 null
     try {
-      const dto = await window.api.providers.update(provider.id, payload);
+      const dto = await window.api.providers.update(provider.id, data);
       upsert(dto);
       toast.success('已更新');
       void navigate({ to: '/' });
@@ -105,7 +96,7 @@ export function EditProviderPage() {
         submitLabel="保存修改"
       />
       <p className="mt-2 text-xs text-slate-500">
-        提示：已自动从密钥链解密预填；如需更换请重新输入，未修改则保留原值。
+        提示：已自动从密钥链解密预填；如需更换请重新输入。
       </p>
     </div>
   );

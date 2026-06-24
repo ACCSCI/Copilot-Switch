@@ -13,7 +13,8 @@ export function registerSystemIpc() {
   });
 
   ipcMain.handle('system:getLogs', async () => {
-    return logger.getLogs().slice(-200); // 最近 200 行
+    const lines = await logger.getLogs();
+    return lines.slice(-200); // 最近 200 行
   });
 
   ipcMain.handle('system:getLogPath', async () => {
