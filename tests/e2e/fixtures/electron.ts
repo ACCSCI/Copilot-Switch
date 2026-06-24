@@ -47,29 +47,3 @@ export const test = base.extend<Fixtures>({
 });
 
 export { expect };
-
-/** 读取主进程当前环境变量 */
-export async function getEnv(app: ElectronApplication) {
-  return app.evaluate(({ process }) => ({
-    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
-    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
-    ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY,
-    ANTHROPIC_BASE_URL: process.env.ANTHROPIC_BASE_URL,
-    AZURE_OPENAI_KEY: process.env.AZURE_OPENAI_KEY,
-    AZURE_OPENAI_BASE_URL: process.env.AZURE_OPENAI_BASE_URL,
-    COPILOT_MODEL: process.env.COPILOT_MODEL,
-    COPILOT_WIRE_API: process.env.COPILOT_WIRE_API,
-  }));
-}
-
-/** 等待主进程中的某个 IPC 调用完成 */
-export async function waitForIpc(page: Page, event: string, timeout = 10_000) {
-  return page.waitForFunction(
-    (ev) => {
-      // 占位：实际等待通过 await page.evaluate
-      return true;
-    },
-    event,
-    { timeout },
-  );
-}

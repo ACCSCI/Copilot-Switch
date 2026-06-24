@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { DatabaseSync, type DatabaseSyncT } from '../db/node-sqlite';
+import { DatabaseSync } from '../db/node-sqlite';
 import { setDb, closeDb } from '../db/client';
 import { providerRepo } from '../db/repository';
 import '../../../tests/setup/main';
@@ -25,10 +25,8 @@ const baseInput = {
 };
 
 describe('providerRepo', () => {
-  let db: DatabaseSyncT;
-
   beforeEach(() => {
-    db = freshDb();
+    freshDb();
   });
 
   afterEach(() => {

@@ -23,11 +23,6 @@ test.describe('拖拽排序', () => {
     const count = await cards.count();
     expect(count).toBe(3);
 
-    const beforeOrder = await cards.allTextContents();
-    const nameA = beforeOrder[0]?.match(/A [A-Z0-9]+/)?.[0]!;
-    const nameB = beforeOrder[1]?.match(/B [A-Z0-9]+/)?.[0]!;
-    const nameC = beforeOrder[2]?.match(/C [A-Z0-9]+/)?.[0]!;
-
     // 拖拽：用 nth 定位精确的 drag handle
     const handleB = cards.nth(1).getByTestId('drag-handle');
     const cardABox = await cards.nth(0).boundingBox();
@@ -44,7 +39,5 @@ test.describe('拖拽排序', () => {
     expect(afterOrder[0]).toContain('B');
     expect(afterOrder[1]).toContain('A');
     expect(afterOrder[2]).toContain('C');
-
-    void nameC;
   });
 });

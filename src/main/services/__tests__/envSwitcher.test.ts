@@ -3,7 +3,7 @@ import { exec } from 'node:child_process';
 import { setDb, closeDb } from '../../db/client';
 import { providerRepo } from '../../db/repository';
 import { encryptSecret } from '../crypto';
-import { DatabaseSync, type DatabaseSyncT } from '../../db/node-sqlite';
+import { DatabaseSync } from '../../db/node-sqlite';
 import '../../../../tests/setup/main';
 
 // mock electron
@@ -84,10 +84,8 @@ async function seedAzureProvider() {
 }
 
 describe('envSwitcher.activateProvider', () => {
-  let db: DatabaseSyncT;
-
   beforeEach(async () => {
-    db = freshDb();
+    freshDb();
     execMock.mockClear();
   });
 
