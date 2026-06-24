@@ -40,6 +40,11 @@ export interface UsageStatDTO {
   recordedAt: number;
 }
 
+export interface ProviderSecrets {
+  apiKey?: string;
+  bearerToken?: string;
+}
+
 export interface EnvSnapshot {
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
@@ -50,11 +55,6 @@ export interface EnvSnapshot {
   ANTHROPIC_BASE_URL?: string;
   COPILOT_MODEL?: string;
   COPILOT_WIRE_API?: string;
-}
-
-export interface ProviderSecrets {
-  apiKey?: string;
-  bearerToken?: string;
 }
 
 /** 渲染层可见的 IPC API */
@@ -78,9 +78,8 @@ export interface RendererApi {
   system: {
     getEnvSnapshot(): Promise<EnvSnapshot>;
     openLogDir(): Promise<void>;
-  };
-  cli: {
-    openTerminal(): Promise<void>;
+    getLogs(): Promise<string[]>;
+    getLogPath(): Promise<string>;
   };
 }
 

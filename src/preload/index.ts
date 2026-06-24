@@ -32,9 +32,8 @@ const api: RendererApi = {
   system: {
     getEnvSnapshot: () => ipcRenderer.invoke('system:getEnvSnapshot') as Promise<EnvSnapshot>,
     openLogDir: () => ipcRenderer.invoke('system:openLogDir') as Promise<void>,
-  },
-  cli: {
-    openTerminal: () => ipcRenderer.invoke('cli:openTerminal') as Promise<void>,
+    getLogs: () => ipcRenderer.invoke('system:getLogs') as Promise<string[]>,
+    getLogPath: () => ipcRenderer.invoke('system:getLogPath') as Promise<string>,
   },
 };
 

@@ -1,6 +1,6 @@
-import { ipcMain, app, shell } from 'electron';
+import { ipcMain, shell } from 'electron';
 import { getEnvSnapshot } from '../services/envSwitcher';
-import path from 'node:path';
+import { logger } from '../logger';
 
 export function registerSystemIpc() {
   ipcMain.handle('system:getEnvSnapshot', async () => {
@@ -8,12 +8,15 @@ export function registerSystemIpc() {
   });
 
   ipcMain.handle('system:openLogDir', async () => {
-    const logDir = path.join(app.getPath('userData'), 'logs');
+    const logDir = logger.getLogDir();
     await shell.openPath(logDir);
   });
 
-  ipcMain.handle('cli:openTerminal', async () => {
-    // 占位：主进程弹出 PowerShell/Terminal
-    // 实际可用 child_process.spawn('wt') 等
+  ipcMain.handle('system:getLogs', async () => {
+    return logger.getLogs().slice(-200); // 最近 200 行
+  });
+
+  ipcMain.handle('system:getLogPath', async () => {
+    return logger.getLogPath();
   });
 }

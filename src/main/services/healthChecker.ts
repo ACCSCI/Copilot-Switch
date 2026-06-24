@@ -7,6 +7,7 @@ import OpenAI from 'openai';
 import type { PingResult } from '@shared/schemas';
 import type { ProviderRow } from '../db/schema.sql';
 import { decryptSecret } from './crypto';
+import { logger } from '../logger';
 
 const TIMEOUT_MS = 8_000;
 
@@ -70,10 +71,17 @@ export async function pingProvider(
       },
     };
   } catch (e) {
+    const errMsg = e instanceof Error ? e.message : String(e);
+    logger.error('pingProvider failed', {
+      providerId: provider.id,
+      model: provider.model,
+      shallow: options.shallowOnly ?? false,
+      error: errMsg,
+    });
     return {
       ok: false,
       latencyMs: Date.now() - start,
-      error: e instanceof Error ? e.message : String(e),
+      error: errMsg,
     };
   }
 }

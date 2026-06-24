@@ -2,9 +2,9 @@ import { ipcMain } from 'electron';
 import { providerRepo } from '../db/repository';
 import { providerInputSchema, activateProviderInputSchema } from '@shared/schemas';
 import { activateProvider } from '../services/envSwitcher';
-import { encryptSecret } from '../services/crypto';
-import { decryptSecret } from '../services/crypto';
+import { encryptSecret, decryptSecret } from '../services/crypto';
 import { logger } from '../logger';
+import type { ProviderSecrets } from '@shared/types';
 
 export function registerProviderIpc() {
   ipcMain.handle('providers:list', async () => {
@@ -52,12 +52,23 @@ export function registerProviderIpc() {
     return activateProvider(providerId);
   });
 
-  ipcMain.handle('providers:getSecrets', async (_e, id: string) => {
-    const provider = await providerRepo.getById(id);
-    if (!provider) throw new Error(`Provider not found: ${id}`);
-    return {
-      apiKey: provider.api_key_encrypted ? decryptSecret(provider.api_key_encrypted) : undefined,
-      bearerToken: provider.bearer_token_encrypted ? decryptSecret(provider.bearer_token_encrypted) : undefined,
-    };
+  ipcMain.handle('providers:getSecrets', async (_e, id: string): Promise<ProviderSecrets> => {
+    const row = await providerRepo.getById(id);
+    if (!row) {
+      logger.warn('getSecrets: provider not found', { id });
+      throw new Error(`Provider not found: ${id}`);
+    }
+    try {
+      return {
+        apiKey: row.api_key_encrypted ? decryptSecret(row.api_key_encrypted) : '',
+        bearerToken: row.bearer_token_encrypted ? decryptSecret(row.bearer_token_encrypted) : '',
+      };
+    } catch (e) {
+      logger.error('getSecrets: decrypt failed', {
+        id,
+        error: e instanceof Error ? e.message : String(e),
+      });
+      throw e;
+    }
   });
 }

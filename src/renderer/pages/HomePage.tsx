@@ -1,11 +1,10 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { toast } from 'sonner';
 import { useProviderStore } from '@/stores/providerStore';
 import { ProviderList } from '@/components/ProviderList';
 import { AddProviderButton } from '@/components/AddProviderButton';
 import { Button } from '@/components/ui/button';
-import { BarChart3, Settings, X } from 'lucide-react';
+import { BarChart3, X, ScrollText } from 'lucide-react';
+import { LogViewer } from '@/components/LogViewer';
 import {
   Dialog,
   DialogContent,
@@ -17,10 +16,10 @@ import type { ProviderDTO } from '@shared/types';
 import type { HealthCheckDTO } from '@shared/types';
 
 export function HomePage() {
-  const navigate = useNavigate();
-  const { providers, loading, fetch } = useProviderStore();
+  const { loading, fetch } = useProviderStore();
   const [statsFor, setStatsFor] = useState<ProviderDTO | null>(null);
   const [history, setHistory] = useState<HealthCheckDTO[]>([]);
+  const [logOpen, setLogOpen] = useState(false);
 
   useEffect(() => {
     void fetch();
@@ -39,8 +38,8 @@ export function HomePage() {
           <p className="mt-1 text-sm text-slate-500">管理你的 Copilot BYOK 供应商配置</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate({ to: '/' })}>
-            <Settings className="size-4" />
+          <Button variant="ghost" size="icon" onClick={() => setLogOpen(true)} data-testid="open-logs" aria-label="查看日志">
+            <ScrollText className="size-4" />
           </Button>
           <AddProviderButton />
         </div>
@@ -87,6 +86,8 @@ export function HomePage() {
           </DialogClose>
         </DialogContent>
       </Dialog>
+
+      <LogViewer open={logOpen} onOpenChange={setLogOpen} />
     </div>
   );
 }
